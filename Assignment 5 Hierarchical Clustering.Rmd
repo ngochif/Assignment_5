@@ -1,0 +1,93 @@
+---
+title: "Assignment 5 Clustering"
+author: "Franklin Ngochi"
+date: "2023-04-09"
+output: pdf_document
+---
+
+#Libraries
+```{r}
+library(dplyr)
+library(stats)
+library(cluster)
+library(fastDummies)
+library(factoextra)
+```
+
+#Data Preprocessing
+```{r}
+Cereals<-read.csv("C:\\Users\\ngoch\\OneDrive\\Documents\\KSU\\Fundamentals of Machine Learning\\Cereals.csv")
+#removing missing values
+Clean_Cereal<-na.omit(Cereals)
+#Transforming categorical variables to dummies
+dummy_cereals<-fastDummies::dummy_cols(Clean_Cereal, select_columns = c("mfr", "type", "shelf"), remove_first_dummy = FALSE,  remove_selected_columns = TRUE)
+#Scaling dataset to normal
+Scaled_cereals<- dummy_cereals%>%mutate(across(where(is.numeric), scale))
+#Assigning row names for greater lisibility of dendrogram
+rownames(Scaled_cereals)<-Scaled_cereals$name
+Cereals_Data<-Scaled_cereals[, -c(colnames(Scaled_cereals)%in%("name"))]
+head(Cereals_Data)
+``` 
+
+#Applying Hierarchical Clustering using Euclidean distance
+```{r}
+distance<-dist(Cereals_Data, method="euclidean")#dissimilary matrix
+hc1<-hclust(distance, method="complete")
+plot(hc1, cex=0.6, hang=-1)
+```
+#Using AGNES to compare clustering for different methods
+```{r}
+hc_single<-agnes(Cereals_Data, method="single")
+hc_complete<-agnes(Cereals_Data, method="complete")
+hc_average<-agnes(Cereals_Data, method="average")
+hc_ward<-agnes(Cereals_Data, method="ward")
+```
+
+#Compare Agglomerative coefficients to select best method
+```{r}
+hc_single$ac
+hc_complete$ac
+hc_average$ac
+hc_ward$ac
+```
+#Ward's method has the highest agglomerative coefficient. This makes it the best method
+```{r}
+pltree(hc_ward, cex=0.6, hang=-1, main="Dendrogram of Agnes")
+```
+#The optimal number of clusters
+
+```{r}
+fviz_nbclust(Cereals_Data, kmeans, method='wss')
+#The optimal number of clusters is 6 because that is where the graph shows an elbow
+```
+
+#Structure and stability of clusters: Clustering partition A
+```{r}
+Cereals_A<-Cereals_Data[1:55,]
+Cereals_B<-Cereals_Data[56:74,]
+hc_A<-agnes(Cereals_A, method="ward")
+groups_A<-cutree(hc_A, k=6)
+```
+
+#Assign each record in partition B to the closest centroid in partition A
+```{r}
+centroids_A<-aggregate(Cereals_A, by=list(groups_A), mean)[,-1]
+centroids_A
+distances1<-dist(rbind(Cereals_B, centroids_A))
+hcb<-hclust(distances1, method="ward")
+plot(hcb)
+```
+
+#A visual comparison of the dendrograms show that the cluster assignments are consistent compared to the assignment based on all the data.
+
+#Choice of healthy cereal
+```{r}
+Clustered_Cereal<-as.data.frame(cbind(Cereals_Data, df_opt))#Assigning each Cereal to cluster
+Clustered_Cereal
+df_opt<-cutree(hc_ward, k=6)
+centroids_Cereals<-aggregate(Cereals_Data, by=list(df_opt), mean)
+centroids_Cereals#Cluster 1 contains healthy cereals with low calories, low fat and high fibers and protein
+Healthy_Cereals<-Clustered_Cereal%>%filter(Clustered_Cereal$df_opt==1)
+Healthy_Cereals
+```
+
