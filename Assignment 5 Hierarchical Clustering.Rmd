@@ -82,11 +82,11 @@ plot(hcb)
 
 #Choice of healthy cereal
 ```{r}
-Clustered_Cereal<-as.data.frame(cbind(Cereals_Data, df_opt))#Assigning each Cereal to cluster
-Clustered_Cereal
 df_opt<-cutree(hc_ward, k=6)
 centroids_Cereals<-aggregate(Cereals_Data, by=list(df_opt), mean)
 centroids_Cereals#Cluster 1 contains healthy cereals with low calories, low fat and high fibers and protein
+Clustered_Cereal<-as.data.frame(cbind(Cereals_Data, df_opt))#Assigning each Cereal to cluster
+Clustered_Cereal
 Healthy_Cereals<-Clustered_Cereal%>%filter(Clustered_Cereal$df_opt==1)
 Healthy_Cereals
 ```
